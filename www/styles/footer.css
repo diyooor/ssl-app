@@ -1,0 +1,17 @@
+/* styles/footer.css */
+
+/* Minimal login and logout button */
+#login, #logout {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #e0e0e0; /* Similar to background, just slightly visible */
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+#login:hover, #logout:hover {
+    color: #a0a0a0; /* Slightly more visible on hover */
+}
+

@@ -1,3 +1,13 @@
+/* styles/content.css */
+
+#content {
+    display: none;
+    text-align: center;
+    margin-top: 20px; /* Increase this value to create more space between the nav and content */
+    opacity: 0;  /* Start with content invisible */
+    transition: opacity 0.3s ease; /* Smooth transition for content visibility */
+}
+
 #login-form {
     display: none; /* Hidden by default */
     position: fixed;
