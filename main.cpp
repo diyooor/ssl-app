@@ -1,6 +1,7 @@
 #include "include/server_certificate.hpp"
 #include "include/http_tools.hpp"
 #include "include/listener.hpp"
+#include "include/application.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <boost/asio/ssl.hpp>
@@ -24,8 +25,12 @@ int main(int argc, char* argv[])
     auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
     auto const doc_root = std::make_shared<std::string>(argv[3]);
     auto const threads = std::max<int>(1, std::atoi(argv[4]));
-    auto  app = std::make_shared<Application>();
+    
+    // Initialize the io_context
     net::io_context ioc{threads};
+
+    // Initialize the Application with the shared io_context
+    auto app = std::make_shared<Application>(ioc);
 
     ssl::context ctx{ssl::context::tlsv12};
     load_server_certificate(ctx);
@@ -45,4 +50,3 @@ int main(int argc, char* argv[])
 
     return EXIT_SUCCESS;
 }
-

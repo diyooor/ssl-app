@@ -58,11 +58,11 @@ std::string path_cat(beast::string_view base, beast::string_view path)
     return result;
 }
 
-    template <class Body, class Allocator>
+template <class Body, class Allocator>
 http::message_generator handle_request(
-        beast::string_view doc_root,
-        http::request<Body, http::basic_fields<Allocator>>&& req,
-        std::shared_ptr<Application> app)
+    beast::string_view doc_root,
+    http::request<Body, http::basic_fields<Allocator>>&& req,
+    std::shared_ptr<Application> app)
 {
     auto const res_ = [&req](http::status status, const std::string& body, const std::string& content_type = "application/json") {
         http::response<http::string_body> res{status, req.version()};
@@ -75,22 +75,60 @@ http::message_generator handle_request(
     };
 
     try {
-        if (req.method() == http::verb::post && req.target() == "/login") {
+        if (req.method() == http::verb::post && req.target() == "/") {
             auto svc = app->get_redis_service();
             auto const& body = req.body();
             auto json_obj = json::parse(body);
 
-            std::string username = json_obj.at("username").template get<std::string>();
-            std::string password = json_obj.at("password").template get<std::string>();
+            std::string command = json_obj.at("command").template get<std::string>();
 
-            bool valid = svc->validate_login(username, password);
+            if (command == "login") {
+                std::string username = json_obj.at("username").template get<std::string>();
+                std::string password = json_obj.at("password").template get<std::string>();
 
-            if (valid) {
-                return res_(http::status::ok, R"({"message": "Login successful"})");
+                bool valid = svc->validate_login(username, password);
+
+                if (valid) {
+                    std::string session_id = svc->generate_session_id();
+                    svc->create_session(session_id, username);
+
+                    // Start the session expiration timer (e.g., 30 minutes)
+                    app->get_clock_service()->start_timer(session_id, 5);
+
+                    // Set session ID as a secure HTTP-only cookie
+                    http::response<http::string_body> res{http::status::ok, req.version()};
+                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::set_cookie, "session_id=" + session_id + "; HttpOnly; Secure");
+                    res.set(http::field::content_type, "application/json");
+                    res.body() = R"({"message": "Login successful"})";
+                    res.prepare_payload();
+                    return res;
+                } else {
+                    return res_(http::status::unauthorized, R"({"message": "Invalid username or password"})");
+                }
+            } else if (command == "logout") {
+                std::string session_id = req.base()["Cookie"];
+                
+                // Destroy the session
+                svc->destroy_session(session_id);
+                
+                // Cancel the timer associated with the session
+                app->get_clock_service()->cancel_timer(session_id);
+                
+                return res_(http::status::ok, R"({"message": "Logged out successfully"})");
+            } else if (command == "validate_session") {
+                std::string session_id = req.base()["Cookie"];
+                std::optional<std::string> username = svc->validate_session(session_id);
+
+                if (username) {
+                    return res_(http::status::ok, R"({"message": "Session is valid", "username": ")" + *username + "\"}");
+                } else {
+                    return res_(http::status::unauthorized, R"({"message": "Invalid session"})");
+                }
             } else {
-                return res_(http::status::unauthorized, R"({"message": "Invalid username or password"})");
+                return res_(http::status::bad_request, R"({"message": "Unknown command"})");
             }
-        } else if (req.method() != http::verb::get && req.method() != http::verb::head && req.method() != http::verb::post) {
+        } else if (req.method() != http::verb::get && req.method() != http::verb::head) {
             return res_(http::status::bad_request, "Unknown HTTP-method");
         } else if (req.target().empty() || req.target()[0] != '/' || req.target().find("..") != beast::string_view::npos) {
             return res_(http::status::bad_request, "Illegal request-target");
@@ -140,11 +178,8 @@ http::message_generator handle_request(
     }
 }
 
-// Explicit instantiation
 template http::message_generator handle_request<http::string_body, std::allocator<char>>(
-        beast::string_view doc_root,
-        http::request<http::string_body, http::basic_fields<std::allocator<char>>>&& req,
-        std::shared_ptr<Application> app);
-
-
+    beast::string_view doc_root,
+    http::request<http::string_body, http::basic_fields<std::allocator<char>>>&& req,
+    std::shared_ptr<Application> app);
 

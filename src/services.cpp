@@ -1,8 +1,9 @@
 #include "../include/services.hpp"
 #include "../include/http_tools.hpp"
 #include "../include/application.hpp"
-#include <boost/json.hpp>
-ClientService::ClientService() : resolver_(ioc_), stream_(ioc_) {}
+#include <uuid/uuid.h>
+ClientService::ClientService(boost::asio::io_context& io_context)
+    : resolver_(io_context), stream_(io_context) {}
 
 std::string ClientService::get(const std::string& host, const std::string& port, const std::string& target, int version) {
     try {
@@ -132,3 +133,63 @@ void RedisService::register_user(const std::string& username, const std::string&
     }
 }
 
+std::string RedisService::generate_session_id() {
+    uuid_t uuid;
+    uuid_generate(uuid);
+    char uuid_str[37]; // UUIDs are 36 characters + null terminator
+    uuid_unparse(uuid, uuid_str);
+    return std::string(uuid_str);
+}
+
+void RedisService::create_session(const std::string& session_id, const std::string& username) {
+    redis_.hset("session:" + session_id, "username", username);
+    redis_.expire("session:" + session_id, 3600); // Set session expiry to 1 hour
+}
+
+std::optional<std::string> RedisService::validate_session(const std::string& session_id) {
+    auto username = redis_.hget("session:" + session_id, "username");
+    if (username) {
+        return *username;
+    } else {
+        return std::nullopt;
+    }
+}
+
+void RedisService::destroy_session(const std::string& session_id) {
+    redis_.del("session:" + session_id);
+}
+
+ClockService::ClockService(boost::asio::io_context& io_context, RedisService& redis_service)
+    : io_context_(io_context), redis_service_(redis_service) {}
+
+void ClockService::start_timer(const std::string& session_id, int duration_seconds) {
+    auto timer = std::make_shared<boost::asio::steady_timer>(io_context_, std::chrono::seconds(duration_seconds));
+
+    // Set up the timer to call on_timer_expire when the duration elapses
+    timer->async_wait([this, session_id](const boost::system::error_code& ec) {
+        if (!ec) {
+            on_timer_expire(session_id);
+        }
+    });
+
+    // Store the timer in the map
+    timers_[session_id] = timer;
+}
+
+void ClockService::cancel_timer(const std::string& session_id) {
+    auto it = timers_.find(session_id);
+    if (it != timers_.end()) {
+        it->second->cancel(); // Cancel the timer
+        timers_.erase(it);    // Remove the timer from the map
+    }
+}
+
+void ClockService::on_timer_expire(const std::string& session_id) {
+    // Remove the session from Redis
+    redis_service_.destroy_session(session_id);
+
+    // Remove the expired timer from the map
+    timers_.erase(session_id);
+
+    std::cout << "Session " << session_id << " expired and was removed from Redis." << std::endl;
+}
