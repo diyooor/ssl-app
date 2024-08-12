@@ -8,6 +8,7 @@ Application::Application() {
 
     // Initialize ClientService
     client_service_ = std::make_shared<ClientService>();
+    
 }
 
 std::shared_ptr<RedisService> Application::get_redis_service() const { 
