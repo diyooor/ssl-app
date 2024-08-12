@@ -1,0 +1,12 @@
+nav.shrink {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+}
+
+#content {
+    display: block;
+    opacity: 1; /* Make content visible with fade-in effect */
+}
+

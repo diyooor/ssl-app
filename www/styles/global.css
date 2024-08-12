@@ -1,0 +1,55 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9; /* Slightly off-white background */
+    font-family: 'Lato', sans-serif;
+    flex-direction: column;
+}
+
+nav {
+    display: flex;
+    gap: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.3s ease;
+}
+
+a {
+    text-decoration: none;
+    color: #000;
+    font-size: 1.5rem;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #555;
+}
+
+#content {
+    display: none;
+    text-align: center;
+    margin-top: 20px; /* Increase this value to create more space between the nav and content */
+    opacity: 0;  /* Start with content invisible */
+    transition: opacity 0.3s ease; /* Smooth transition for content visibility */
+}
+
+/* Minimal Login Button */
+#login {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #e0e0e0; /* Similar to background, just slightly visible */
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+#login:hover {
+    color: #a0a0a0; /* Slightly more visible on hover */
+}
+
