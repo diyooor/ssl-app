@@ -2,7 +2,7 @@
 
 ## Description
 
-**sl-app** is a naturally aspirated full-stack application built on Boost Beast and Boost Asio. It features a lightweight client implemented in pure HTML, JavaScript, and CSS. The application is designed to handle asynchronous HTTP operations over secure SSL/TLS connections, with backend support for Redis to manage user authentication and session management.
+**ssl-app** is a naturally aspirated full-stack application built on Boost Beast and Boost Asio. It features a lightweight client implemented in pure HTML, JavaScript, and CSS. The application is designed to handle asynchronous HTTP operations over secure SSL/TLS connections, with backend support for Redis to manage user authentication and session management.
 
 ## Dependencies
 
